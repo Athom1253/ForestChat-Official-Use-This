@@ -17,7 +17,7 @@ import { SearchPanel } from '@/components/chat/SearchPanel'
 import { MembersPanel } from '@/components/chat/MembersPanel'
 import { PinnedMessagesPanel } from '@/components/chat/PinnedMessagesPanel'
 import { ChatSettingsPanel } from '@/components/chat/ChatSettingsPanel'
-import { CallModal } from '@/components/chat/CallModal'
+import { useCallStore } from '@/stores/call'
 
 interface MessageWithAuthor extends Message {
   author: Profile | null
@@ -43,7 +43,7 @@ export default function ChatPage() {
   const [showSettings, setShowSettings] = useState(false)
   const [showDrawing, setShowDrawing] = useState(false)
   const [showVoice, setShowVoice] = useState(false)
-  const [showCall, setShowCall] = useState<'voice' | 'video' | 'screen' | null>(null)
+  const { startCall } = useCallStore()
   const [showNewMessages, setShowNewMessages] = useState(false)
   const [showScrollBottom, setShowScrollBottom] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
@@ -268,6 +268,23 @@ export default function ChatPage() {
     }, { onConflict: 'chat_id,user_id' })
   }
 
+  async function handleStartCall(type: 'voice' | 'video' | 'screen') {
+    if (!channelId || !user) return
+    // For DMs, look up the other member to send the call signal
+    const { data: members } = await supabase
+      .from('channel_members')
+      .select('user_id')
+      .eq('channel_id', channelId)
+      .neq('user_id', user.id)
+    if (!members || members.length === 0) {
+      toast.error('Could not find call recipient')
+      return
+    }
+    const calleeId = members[0].user_id
+    const channelName = channel?.name || 'Direct Message'
+    await startCall(calleeId, channelId, channelName, type)
+  }
+
   // Typing broadcast
   const broadcastTyping = useCallback((isTyping: boolean) => {
     if (!channelId || !user) return
@@ -318,7 +335,7 @@ export default function ChatPage() {
         onMembers={() => setShowMembers(!showMembers)}
         onPinned={() => setShowPinned(!showPinned)}
         onSettings={() => setShowSettings(!showSettings)}
-        onCall={(type) => setShowCall(type)}
+        onCall={(type) => handleStartCall(type)}
         onSync={() => { loadMessages() }}
       />
 
@@ -469,13 +486,7 @@ export default function ChatPage() {
           onClose={() => setShowVoice(false)}
         />
       )}
-      {showCall && (
-        <CallModal
-          type={showCall}
-          channelName={channel?.name || 'Direct Message'}
-          onClose={() => setShowCall(null)}
-        />
-      )}
+
     </div>
   )
 }

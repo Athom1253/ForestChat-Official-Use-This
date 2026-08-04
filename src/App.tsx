@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 import { ToastContainer } from '@/components/ui/ToastContainer'
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
+import { CallProvider } from '@/components/chat/CallProvider'
 import AuthPage from '@/pages/AuthPage'
 import AppLayout from '@/pages/AppLayout'
 import ChatPage from '@/pages/ChatPage'
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="*" element={<Navigate to={session ? "/" : "/auth"} />} />
       </Routes>
       <ToastContainer />
+      <CallProvider />
     </>
   )
 }
